@@ -1,0 +1,20 @@
+{
+  "name": "tg-upto",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Telegram bot that uploads received files to Google Drive",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "setup-drive": "node setup-drive.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "googleapis": "^144.0.0",
+    "input": "^1.0.1",
+    "telegram": "^2.26.21"
+  }
+}
