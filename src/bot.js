@@ -167,8 +167,8 @@ class Bot {
       logger.warn(`Rejected message from unauthorized user ${senderId}`);
       try {
         await msg.reply({
-          message: `🚫 Not authorized.\nYour id: \`${senderId}\``,
-          parseMode: "markdown",
+          message: `🚫 Not authorized.\nYour id: <code>${senderId}</code>`,
+          parseMode: "html",
         });
       } catch (e) {
         // Ignore
@@ -184,8 +184,8 @@ class Bot {
     }
     if (text.startsWith("/whoami")) {
       await msg.reply({
-        message: `Your Telegram id: \`${senderId}\``,
-        parseMode: "markdown",
+        message: `Your Telegram id: <code>${senderId}</code>`,
+        parseMode: "html",
       });
       return;
     }
@@ -208,15 +208,15 @@ class Bot {
   async sendHelp(msg) {
     await msg.reply({
       message:
-        "*tg-upto*\n\n" +
+        "<b>tg-upto</b>\n\n" +
         "Send me any file (document, photo, video, audio, voice, sticker) " +
         "and I will upload it to Google Drive and reply with the link.\n\n" +
         "After upload, you can decide whether the file should be public " +
-        "(*Anyone with the link*) or stay private.\n\n" +
-        "*Commands:*\n" +
+        "(<b>Anyone with the link</b>) or stay private.\n\n" +
+        "<b>Commands:</b>\n" +
         "/start, /help — this message\n" +
         "/whoami — show your Telegram id\n",
-      parseMode: "markdown",
+      parseMode: "html",
     });
   }
 
@@ -236,8 +236,8 @@ class Bot {
 
     const sizeStr = humanSize(fileMeta.size) || "";
     const status = await msg.reply({
-      message: `📥 Receiving \`${finalName}\`${sizeStr ? `  (${sizeStr})` : ""}...`,
-      parseMode: "markdown",
+      message: `📥 Receiving <code>${escapeHtml(finalName)}</code>${sizeStr ? `  (${sizeStr})` : ""}...`,
+      parseMode: "html",
     });
 
     let lastEdit = 0;
@@ -249,7 +249,7 @@ class Bot {
         await this.client.editMessage(msg.chatId, {
           message: Number(status.id),
           text,
-          parseMode: "markdown",
+          parseMode: "html",
         });
       } catch (e) {
         // Ignore edit errors (rate limit, identical content, etc.)
@@ -267,12 +267,12 @@ class Bot {
           if (totalBytes > 0) {
             const pct = Math.min(100, (dlBytes / totalBytes) * 100);
             editStatus(
-              `📥 Receiving \`${finalName}\`\n` +
+              `📥 Receiving <code>${escapeHtml(finalName)}</code>\n` +
                 `${humanSize(dlBytes)} / ${humanSize(totalBytes)}  ${pct.toFixed(0)}%`,
             );
           } else {
             editStatus(
-              `📥 Receiving \`${finalName}\`\n${humanSize(dlBytes)}`,
+              `📥 Receiving <code>${escapeHtml(finalName)}</code>\n${humanSize(dlBytes)}`,
             );
           }
         },
@@ -288,7 +288,7 @@ class Bot {
         parentId: config.google.folderId,
         onProgress: (pct, sent, total) => {
           editStatus(
-            `☁️ Uploading \`${finalName}\`\n` +
+            `☁️ Uploading <code>${escapeHtml(finalName)}</code>\n` +
               `${humanSize(sent)} / ${humanSize(total)}  ${pct.toFixed(0)}%`,
           );
         },
@@ -305,15 +305,15 @@ class Bot {
       // 4. Final message with public/private buttons
       const links = drive.buildLinks(driveFile.id, driveFile.mimeType);
       const text =
-        `✅ Uploaded *${escapeMd(driveFile.name)}*\n` +
+        `✅ Uploaded <b>${escapeHtml(driveFile.name)}</b>\n` +
         (driveFile.size ? `📦 ${humanSize(driveFile.size)}\n` : "") +
-        `🔗 [View on Drive](${links.view})\n\n` +
-        `_Choose visibility:_`;
+        `🔗 <a href="${escapeHtml(links.view)}">View on Drive</a>\n\n` +
+        `<i>Choose visibility:</i>`;
 
       await this.client.editMessage(msg.chatId, {
         message: Number(status.id),
         text,
-        parseMode: "markdown",
+        parseMode: "html",
         linkPreview: false,
         buttons: [
           [
@@ -329,8 +329,8 @@ class Bot {
       logger.error(`Upload failed for ${senderId}: ${err.message}`);
       await this.client.editMessage(msg.chatId, {
         message: Number(status.id),
-        text: `❌ Upload failed: ${escapeMd(err.message || String(err))}`,
-        parseMode: "markdown",
+        text: `❌ Upload failed: ${escapeHtml(err.message || String(err))}`,
+        parseMode: "html",
       });
     } finally {
       userState.activeUploads = Math.max(0, userState.activeUploads - 1);
@@ -370,26 +370,29 @@ class Bot {
           const meta = await drive.getFile(fileId);
           const links = drive.buildLinks(fileId, meta.mimeType);
           const lines = [
-            `✅ *${escapeMd(meta.name)}* is now public`,
+            `✅ <b>${escapeHtml(meta.name)}</b> is now public`,
             meta.size ? `📦 ${humanSize(Number(meta.size))}` : null,
             "",
-            `🔗 [View](${links.view})`,
-            `⬇️ [Direct download](${links.download})`,
-            links.embed ? `🖼️ [Embed link](${links.embed})` : null,
+            `🔗 <a href="${escapeHtml(links.view)}">View</a>`,
+            `⬇️ <a href="${escapeHtml(links.download)}">Direct download</a>`,
+            links.embed
+              ? `🖼️ <a href="${escapeHtml(links.embed)}">Embed link</a>`
+              : null,
           ].filter(Boolean);
           text = lines.join("\n");
         } else {
           const meta = await drive.getFile(fileId);
           const links = drive.buildLinks(fileId, meta.mimeType);
           text =
-            `🔒 *${escapeMd(meta.name)}* kept private\n` +
+            `🔒 <b>${escapeHtml(meta.name)}</b> kept private\n` +
             (meta.size ? `📦 ${humanSize(Number(meta.size))}\n` : "") +
-            `🔗 [View on Drive](${links.view})  _(only owners can open)_`;
+            `🔗 <a href="${escapeHtml(links.view)}">View on Drive</a>  ` +
+            `<i>(only owners can open)</i>`;
         }
         await this.client.editMessage(event.chatId, {
           message: Number(event.messageId),
           text,
-          parseMode: "markdown",
+          parseMode: "html",
           linkPreview: false,
         });
         await event.answer({});
@@ -405,8 +408,12 @@ class Bot {
   }
 }
 
-function escapeMd(s) {
-  return String(s).replace(/([_*`[\]])/g, "\\$1");
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 module.exports = { Bot };
