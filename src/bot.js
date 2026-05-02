@@ -327,9 +327,23 @@ class Bot {
       });
     } catch (err) {
       logger.error(`Upload failed for ${senderId}: ${err.message}`);
+      let userText;
+      if (drive.isInvalidGrant(err)) {
+        userText =
+          "❌ Upload failed: <b>Google rejected the refresh token (invalid_grant).</b>\n\n" +
+          "Most likely cause: your OAuth app at " +
+          "https://console.cloud.google.com/auth/audience is in <b>Testing</b> " +
+          "mode, which makes Google revoke refresh tokens after 7 days. " +
+          "Click <b>Publish app</b> (no Google verification needed for the " +
+          "<code>drive.file</code> scope), then re-run " +
+          "<code>node setup-drive.js</code> on the server and " +
+          "<code>pm2 restart tg-upto</code>.";
+      } else {
+        userText = `❌ Upload failed: ${escapeHtml(err.message || String(err))}`;
+      }
       await this.client.editMessage(msg.chatId, {
         message: Number(status.id),
-        text: `❌ Upload failed: ${escapeHtml(err.message || String(err))}`,
+        text: userText,
         parseMode: "html",
       });
     } finally {

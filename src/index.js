@@ -35,8 +35,7 @@ async function main() {
     await drive.checkAuth();
   } catch (err) {
     logger.error(
-      `Google Drive authentication failed: ${err.message}. ` +
-        `Run \`node setup-drive.js\` to (re)generate a refresh token.`,
+      `Google Drive authentication failed.\n${drive.describeAuthError(err)}`,
     );
     process.exit(1);
   }
