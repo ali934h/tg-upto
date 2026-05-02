@@ -262,7 +262,32 @@ async function main() {
   console.log("Setup complete. You can start the bot now.");
 }
 
+function hint(err) {
+  const msg = (err && err.message ? err.message : String(err)).toLowerCase();
+  if (msg.includes("invalid_grant")) {
+    return [
+      "",
+      "  This usually means one of:",
+      "    - The OAuth app is in 'Testing' status (refresh tokens expire in 7 days).",
+      "      Publish it at https://console.cloud.google.com/auth/audience.",
+      "    - Access was revoked at https://myaccount.google.com/permissions.",
+      "    - The OAuth client was deleted/recreated in the Cloud Console.",
+    ].join("\n");
+  }
+  if (msg.includes("invalid_request") || msg.includes("redirect_uri_mismatch")) {
+    return [
+      "",
+      "  Google rejected the request. Make sure:",
+      "    - The OAuth client type is 'Desktop app' (loopback redirects to",
+      "      http://127.0.0.1 are auto-accepted only for Desktop clients).",
+      "    - The OAuth app's publishing status is 'In production'.",
+    ].join("\n");
+  }
+  return "";
+}
+
 main().catch((err) => {
-  console.error("Setup failed:", err && err.message ? err.message : err);
+  const msg = err && err.message ? err.message : String(err);
+  console.error(`Setup failed: ${msg}${hint(err)}`);
   process.exit(1);
 });

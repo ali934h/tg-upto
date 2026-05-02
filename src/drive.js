@@ -7,6 +7,40 @@ const logger = require("./logger");
 
 const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
 
+// Returns true if the error from googleapis indicates the refresh token is
+// no longer accepted by Google (invalid_grant).
+function isInvalidGrant(err) {
+  if (!err) return false;
+  const msg = (err.message || "").toLowerCase();
+  if (msg.includes("invalid_grant")) return true;
+  const data = err.response && err.response.data;
+  if (data && typeof data === "object" && data.error === "invalid_grant") return true;
+  return false;
+}
+
+// Long, actionable hint for `invalid_grant` failures. The most common cause
+// (by far) is that the OAuth app is in 'Testing' publishing status, which
+// makes Google revoke refresh tokens after 7 days.
+function describeAuthError(err) {
+  if (isInvalidGrant(err)) {
+    return [
+      "Google rejected the refresh token (invalid_grant).",
+      "Check, in this order:",
+      "  1. Publishing status at https://console.cloud.google.com/auth/audience",
+      "     must be 'In production'. Apps in 'Testing' have refresh tokens",
+      "     revoked by Google after 7 days. Click 'Publish app' (no Google",
+      "     verification needed for the drive.file scope).",
+      "  2. The Drive owner did not revoke access at",
+      "     https://myaccount.google.com/permissions.",
+      "  3. The OAuth client in Google Cloud Console was not deleted/recreated.",
+      "After fixing the cause, re-run `node setup-drive.js` to issue a fresh",
+      "refresh token, then `pm2 restart tg-upto`.",
+    ].join("\n");
+  }
+  return `${err && err.message ? err.message : String(err)}\n` +
+    "Run `node setup-drive.js` to (re)generate a refresh token.";
+}
+
 function makeOAuthClient() {
   const oauth = new google.auth.OAuth2(
     config.google.clientId,
@@ -103,5 +137,7 @@ module.exports = {
   getFile,
   buildLinks,
   checkAuth,
+  isInvalidGrant,
+  describeAuthError,
   SCOPES,
 };
