@@ -236,12 +236,24 @@ run_drive_setup() {
   step "Bootstrapping Google Drive OAuth"
   cat <<EOF
 ${BOLD}Now we need to obtain a refresh token for Google Drive.${NC}
+${YELLOW}IMPORTANT:${NC} make sure your OAuth app is published (status:
+  ${BOLD}In production${NC}) at https://console.cloud.google.com/auth/audience
+  before continuing. Apps left in ${BOLD}Testing${NC} mode get their refresh
+  tokens revoked by Google after 7 days, which causes uploads to fail with
+  ${BOLD}invalid_grant${NC}. The 'drive.file' scope is non-sensitive, so
+  publishing does not require Google verification.
+
 The next step opens an interactive prompt:
-  1. A URL will be printed - open it in any browser logged in as the Drive owner.
-  2. Approve the consent screen (you may have to add your email under
-     "OAuth consent screen -> Test users" if the app is in Testing mode).
-  3. Google shows an authorization code (or returns to a page whose URL
-     contains "code=..."). Copy that code and paste it here.
+  1. A URL will be printed - open it in any browser logged in as the
+     Drive owner.
+  2. Approve the consent screen.
+  3. Google redirects to http://127.0.0.1:53682/?code=...
+       - On the same machine: caught automatically.
+       - Over SSH: tunnel first with
+           ssh -L 53682:127.0.0.1:53682 root@<this-server>
+         then open the auth URL on your laptop.
+       - Otherwise: copy the redirected URL from the address bar (or
+         just the code= value) and paste it into the terminal prompt.
 
 EOF
   cd "${INSTALL_DIR}"
